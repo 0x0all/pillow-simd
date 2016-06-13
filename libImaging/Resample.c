@@ -56,6 +56,12 @@ static struct filter BICUBIC = { bicubic_filter, 2.0 };
 
 
 
+/* The number of bits available in the accumulator.
+   Filters can have negative areas. We need at least 1 bit for that
+   and 1 extra bit for overflow. 8 bits is the result. */
+#define MAX_PRECISION_BITS (32 - 8 - 2)
+
+/* We use signed INT16 type to store coefficients. */
 #define MAX_COEFS_PRECISION (16 - 1)
 
 static inline UINT8 clip8(int in, int precision)
@@ -165,6 +171,10 @@ normalize_coeffs(int inSize, int kmax, double *prekk, INT16 **kkp)
         maxkk *= 2;
         coefs_precision += 1;
     };
+
+    if (coefs_precision > MAX_PRECISION_BITS) {
+        coefs_precision = MAX_PRECISION_BITS;
+    }
 
     for (x = 0; x < inSize * kmax; x++) {
         kk[x] = (int) (0.5 + prekk[x] * (1 << coefs_precision));
