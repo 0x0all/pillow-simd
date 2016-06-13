@@ -61,8 +61,8 @@ static struct filter BICUBIC = { bicubic_filter, 2.0 };
    and 1 extra bit for overflow. 8 bits is the result. */
 #define MAX_PRECISION_BITS (32 - 8 - 2)
 
-/* We use signed INT32 type to store coefficients. */
-#define MAX_COEFS_PRECISION (32 - 1)
+/* We use signed INT16 type to store coefficients. */
+#define MAX_COEFS_PRECISION (16 - 1)
 
 UINT8 lookups[512] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
@@ -178,14 +178,14 @@ precompute_coeffs(int inSize, int outSize, struct filter *filterp,
 
 
 int
-normalize_coeffs(int inSize, int kmax, double *prekk, INT32 **kkp)
+normalize_coeffs(int inSize, int kmax, double *prekk, INT16 **kkp)
 {
     int x;
     int coefs_precision;
-    INT32 *kk;
+    INT16 *kk;
     double maxkk;
 
-    kk = malloc(inSize * kmax * sizeof(INT32));
+    kk = malloc(inSize * kmax * sizeof(INT16));
     if ( ! kk) {
         return 0;
     }
@@ -228,7 +228,7 @@ ImagingResampleHorizontal_8bpc(Imaging imIn, int xsize, struct filter *filterp)
     int ss0, ss1, ss2, ss3;
     int xx, yy, x, kmax, xmin, xmax;
     int *xbounds;
-    INT32 *k, *kk;
+    INT16 *k, *kk;
     double *prekk;
     int coefs_precision;
 
@@ -334,7 +334,7 @@ ImagingResampleVertical_8bpc(Imaging imIn, int ysize, struct filter *filterp)
     int ss0, ss1, ss2, ss3;
     int xx, yy, y, kmax, ymin, ymax;
     int *xbounds;
-    INT32 *k, *kk;
+    INT16 *k, *kk;
     double *prekk;
     int coefs_precision;
 
