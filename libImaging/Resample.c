@@ -241,32 +241,32 @@ ImagingResampleHorizontalConvolution8u(UINT32 *lineOut, UINT32 *lineIn,
         k = &kk[xx * kmax];
         x = 0;
 
-#if defined(__AVX2__)
+// #if defined(__AVX2__)
 
-        __m256i sss256 = _mm256_set1_epi32((1 << (coefs_precision - 9 -2)) + xmax / 4);
+//         __m256i sss256 = _mm256_set1_epi32((1 << (coefs_precision - 9 -2)) + xmax / 4);
 
-        for (; x < xmax - 3; x += 4) {
-            __m256i pix, mmk, mul;
-            __m256i source = _mm256_castsi128_si256(
-                _mm_loadu_si128((__m128i *) &lineIn[x + xmin]));
-            __m256i ksource = _mm256_set1_epi64x(*(int64_t *) &k[x]);
-            source = _mm256_unpacklo_epi64(source, source);
+//         for (; x < xmax - 3; x += 4) {
+//             __m256i pix, mmk, mul;
+//             __m256i source = _mm256_castsi128_si256(
+//                 _mm_loadu_si128((__m128i *) &lineIn[x + xmin]));
+//             __m256i ksource = _mm256_set1_epi64x(*(int64_t *) &k[x]);
+//             source = _mm256_unpacklo_epi64(source, source);
 
-            pix = _mm256_unpacklo_epi8(source, _mm256_setzero_si256());
-            mmk = _mm256_shuffle_epi8(ksource, _mm256_set_epi8(
-                3,2, 3,2, 3,2, 3,2, 1,0, 1,0, 1,0, 1,0,
-                3,2, 3,2, 3,2, 3,2, 1,0, 1,0, 1,0, 1,0));
-            mul = _mm256_mulhi_epi16(_mm256_slli_epi16(pix, 7), mmk);
-            sss256 = _mm256_add_epi32(sss256, _mm256_cvtepi16_epi32(mul));
-            sss256 = _mm256_add_epi32(sss256, _mm256_cvtepi16_epi32(_mm256_srli_si128(mul, 8)));
-        }
+//             pix = _mm256_unpacklo_epi8(source, _mm256_setzero_si256());
+//             mmk = _mm256_shuffle_epi8(ksource, _mm256_set_epi8(
+//                 3,2, 3,2, 3,2, 3,2, 1,0, 1,0, 1,0, 1,0,
+//                 3,2, 3,2, 3,2, 3,2, 1,0, 1,0, 1,0, 1,0));
+//             mul = _mm256_mulhi_epi16(_mm256_slli_epi16(pix, 7), mmk);
+//             sss256 = _mm256_add_epi32(sss256, _mm256_cvtepi16_epi32(mul));
+//             sss256 = _mm256_add_epi32(sss256, _mm256_cvtepi16_epi32(_mm256_srli_si128(mul, 8)));
+//         }
 
-        sss = _mm_add_epi32(
-            _mm256_extractf128_si256(sss256, 0),
-            _mm256_extractf128_si256(sss256, 1)
-        );
+//         sss = _mm_add_epi32(
+//             _mm256_extractf128_si256(sss256, 0),
+//             _mm256_extractf128_si256(sss256, 1)
+//         );
 
-#else
+// #else
 
         sss = _mm_set1_epi32((1 << (coefs_precision -1)) + xmax / 2);
 
@@ -333,7 +333,7 @@ ImagingResampleHorizontalConvolution8u(UINT32 *lineOut, UINT32 *lineIn,
             sss = _mm_add_epi32(sss, _mm_madd_epi16(pix, mmk));
         }
 
-#endif
+// #endif
 
         for (; x < xmax; x ++) {
             __m128i pix = _mm_cvtepu8_epi32(*(__m128i *) &lineIn[x + xmin]);
@@ -355,6 +355,74 @@ ImagingResampleVerticalConvolution8u(UINT32 *lineOut, Imaging imIn,
     int xsize = imIn->xsize;
 
     __m128i initial = _mm_set1_epi32((1 << (coefs_precision -1)) + xmax / 2);
+
+#if defined(__AVX2__)
+
+    __m256i initial_256 = _mm256_set1_epi32((1 << (coefs_precision -1)) + xmax / 2);
+
+    for (; xx < xsize - 7; xx += 8) {
+        __m256i sss0 = initial_256;
+        __m256i sss1 = initial_256;
+        __m256i sss2 = initial_256;
+        __m256i sss3 = initial_256;
+        x = 0;
+        for (; x < xmax - 1; x += 2) {
+            __m256i source, source1, source2;
+            __m256i pix, mmk, mmk1;
+            mmk = _mm256_set1_epi32(k[x]);
+            mmk1 = _mm256_set1_epi32(k[x + 1]);
+            mmk = _mm256_unpacklo_epi16(
+                _mm256_packs_epi32(mmk, mmk),
+                _mm256_packs_epi32(mmk1, mmk1));
+            
+            source1 = _mm256_loadu_si256(  // top line
+                (__m256i *) &imIn->image32[x + xmin][xx]);
+            source2 = _mm256_loadu_si256(  // bottom line
+                (__m256i *) &imIn->image32[x + 1 + xmin][xx]);
+
+            source = _mm256_unpacklo_epi8(source1, source2);
+            pix = _mm256_unpacklo_epi8(source, _mm256_setzero_si256());
+            sss0 = _mm256_add_epi32(sss0, _mm256_madd_epi16(pix, mmk));
+            pix = _mm256_unpackhi_epi8(source, _mm256_setzero_si256());
+            sss1 = _mm256_add_epi32(sss1, _mm256_madd_epi16(pix, mmk));
+
+            source = _mm256_unpackhi_epi8(source1, source2);
+            pix = _mm256_unpacklo_epi8(source, _mm256_setzero_si256());
+            sss2 = _mm256_add_epi32(sss2, _mm256_madd_epi16(pix, mmk));
+            pix = _mm256_unpackhi_epi8(source, _mm256_setzero_si256());
+            sss3 = _mm256_add_epi32(sss3, _mm256_madd_epi16(pix, mmk));
+        }
+        for (; x < xmax; x += 1) {
+            __m256i source, source1, pix, mmk;
+            mmk = _mm256_set1_epi32(k[x]);
+            
+            source1 = _mm256_loadu_si256(  // top line
+                (__m256i *) &imIn->image32[x + xmin][xx]);
+            
+            source = _mm256_unpacklo_epi8(source1, _mm256_setzero_si256());
+            pix = _mm256_unpacklo_epi8(source, _mm256_setzero_si256());
+            sss0 = _mm256_add_epi32(sss0, _mm256_madd_epi16(pix, mmk));
+            pix = _mm256_unpackhi_epi8(source, _mm256_setzero_si256());
+            sss1 = _mm256_add_epi32(sss1, _mm256_madd_epi16(pix, mmk));
+
+            source = _mm256_unpackhi_epi8(source1, _mm256_setzero_si256());
+            pix = _mm256_unpacklo_epi8(source, _mm256_setzero_si256());
+            sss2 = _mm256_add_epi32(sss2, _mm256_madd_epi16(pix, mmk));
+            pix = _mm256_unpackhi_epi8(source, _mm256_setzero_si256());
+            sss3 = _mm256_add_epi32(sss3, _mm256_madd_epi16(pix, mmk));
+        }
+        sss0 = _mm256_srai_epi32(sss0, coefs_precision);
+        sss1 = _mm256_srai_epi32(sss1, coefs_precision);
+        sss2 = _mm256_srai_epi32(sss2, coefs_precision);
+        sss3 = _mm256_srai_epi32(sss3, coefs_precision);
+
+        sss0 = _mm256_packs_epi32(sss0, sss1);
+        sss2 = _mm256_packs_epi32(sss2, sss3);
+        sss0 = _mm256_packus_epi16(sss0, sss2);
+        _mm256_storeu_si256((__m256i *) &lineOut[xx], sss0);
+    }
+
+#else
 
     for (; xx < xsize - 7; xx += 8) {
         __m128i sss0 = initial;
@@ -506,6 +574,8 @@ ImagingResampleVerticalConvolution8u(UINT32 *lineOut, Imaging imIn,
         sss0 = _mm_packus_epi16(sss0, sss0);
         *(int64_t *) &lineOut[xx] = _mm_cvtsi128_si64x(sss0);
     }
+
+#endif
 
     for (; xx < xsize; xx++) {
         __m128i sss = initial;
