@@ -333,17 +333,24 @@ ImagingResampleVerticalConvolution8u(UINT32 *lineOut, Imaging imIn,
     int xx = 0;
     int xsize = imIn->xsize;
 
-    for (; xx < xsize - 3; xx += 4) {
-        __m128i pix, mmk, mul;
-        __m128i sss0 = _mm_set1_epi32((1 << (coefs_precision - 9 -1)) + xmax / 2);
-        __m128i sss1 = sss0;
-        __m128i sss2 = sss0;
-        __m128i sss3 = sss0;
+    __m128i initial = _mm_set1_epi32((1 << (coefs_precision - 9 -1)) + xmax / 2);
+
+    for (; xx < xsize - 7; xx += 8) {
+        __m128i source, pix, mmk, mul;
+        __m128i sss0 = initial;
+        __m128i sss1 = initial;
+        __m128i sss2 = initial;
+        __m128i sss3 = initial;
+        __m128i sss4 = initial;
+        __m128i sss5 = initial;
+        __m128i sss6 = initial;
+        __m128i sss7 = initial;
 
         for (x = 0; x < xmax; x++) {
-            __m128i source = _mm_loadu_si128((__m128i *) &imIn->image32[x + xmin][xx]);
             mmk = _mm_set1_epi32(k[x]);
             mmk = _mm_packs_epi32(mmk, mmk);
+            
+            source = _mm_loadu_si128((__m128i *) &imIn->image32[x + xmin][xx]);
             
             pix = _mm_unpacklo_epi8(source, _mm_setzero_si128());
             mul = _mm_mulhi_epi16(_mm_slli_epi16(pix, 7), mmk);
@@ -354,16 +361,59 @@ ImagingResampleVerticalConvolution8u(UINT32 *lineOut, Imaging imIn,
             mul = _mm_mulhi_epi16(_mm_slli_epi16(pix, 7), mmk);
             sss2 = _mm_add_epi32(sss2, _mm_cvtepi16_epi32(mul));
             sss3 = _mm_add_epi32(sss3, _mm_cvtepi16_epi32(_mm_srli_si128(mul, 8)));
+            
+            source = _mm_loadu_si128((__m128i *) &imIn->image32[x + xmin][xx + 4]);
+
+            pix = _mm_unpacklo_epi8(source, _mm_setzero_si128());
+            mul = _mm_mulhi_epi16(_mm_slli_epi16(pix, 7), mmk);
+            sss4 = _mm_add_epi32(sss4, _mm_cvtepi16_epi32(mul));
+            sss5 = _mm_add_epi32(sss5, _mm_cvtepi16_epi32(_mm_srli_si128(mul, 8)));
+            
+            pix = _mm_unpackhi_epi8(source, _mm_setzero_si128());
+            mul = _mm_mulhi_epi16(_mm_slli_epi16(pix, 7), mmk);
+            sss6 = _mm_add_epi32(sss6, _mm_cvtepi16_epi32(mul));
+            sss7 = _mm_add_epi32(sss7, _mm_cvtepi16_epi32(_mm_srli_si128(mul, 8)));
         }
         sss0 = _mm_srai_epi32(sss0, coefs_precision - 9);
         sss1 = _mm_srai_epi32(sss1, coefs_precision - 9);
         sss2 = _mm_srai_epi32(sss2, coefs_precision - 9);
         sss3 = _mm_srai_epi32(sss3, coefs_precision - 9);
+        sss4 = _mm_srai_epi32(sss4, coefs_precision - 9);
+        sss5 = _mm_srai_epi32(sss5, coefs_precision - 9);
+        sss6 = _mm_srai_epi32(sss6, coefs_precision - 9);
+        sss7 = _mm_srai_epi32(sss7, coefs_precision - 9);
 
         sss0 = _mm_packs_epi32(sss0, sss1);
         sss2 = _mm_packs_epi32(sss2, sss3);
         sss0 = _mm_packus_epi16(sss0, sss2);
         _mm_storeu_si128((__m128i *) &lineOut[xx], sss0);
+        sss4 = _mm_packs_epi32(sss4, sss5);
+        sss6 = _mm_packs_epi32(sss6, sss7);
+        sss4 = _mm_packus_epi16(sss4, sss6);
+        _mm_storeu_si128((__m128i *) &lineOut[xx + 4], sss4);
+    }
+
+    for (; xx < xsize - 1; xx += 2) {
+        __m128i pix, mmk, mul;
+        __m128i sss0 = initial;
+        __m128i sss1 = initial;
+
+        for (x = 0; x < xmax; x++) {
+            __m128i source = _mm_cvtsi64_si128(*(int64_t *) &imIn->image32[x + xmin][xx]);
+            mmk = _mm_set1_epi32(k[x]);
+            mmk = _mm_packs_epi32(mmk, mmk);
+            
+            pix = _mm_unpacklo_epi8(source, _mm_setzero_si128());
+            mul = _mm_mulhi_epi16(_mm_slli_epi16(pix, 7), mmk);
+            sss0 = _mm_add_epi32(sss0, _mm_cvtepi16_epi32(mul));
+            sss1 = _mm_add_epi32(sss1, _mm_cvtepi16_epi32(_mm_srli_si128(mul, 8)));
+        }
+        sss0 = _mm_srai_epi32(sss0, coefs_precision - 9);
+        sss1 = _mm_srai_epi32(sss1, coefs_precision - 9);
+
+        sss0 = _mm_packs_epi32(sss0, sss1);
+        sss0 = _mm_packus_epi16(sss0, sss0);
+        *(int64_t *) &lineOut[xx] = _mm_cvtsi128_si64x(sss0);
     }
 
     for (; xx < imIn->xsize; xx++) {
