@@ -177,7 +177,11 @@ normalize_coeffs(int inSize, int kmax, double *prekk, INT16 **kkp)
     }
 
     for (x = 0; x < inSize * kmax; x++) {
-        kk[x] = (int) (0.5 + prekk[x] * (1 << coefs_precision));
+        if (prekk[x] > 0) {
+            kk[x] = (int) (0.5 + prekk[x] * (1 << coefs_precision));
+        } else {
+            kk[x] = (int) (-0.5 + prekk[x] * (1 << coefs_precision));
+        }
     }
 
     *kkp = kk;
