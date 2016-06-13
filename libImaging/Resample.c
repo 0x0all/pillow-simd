@@ -530,6 +530,8 @@ ImagingResampleVerticalConvolution8u(UINT32 *lineOut, Imaging imIn,
         _mm_storeu_si128((__m128i *) &lineOut[xx + 4], sss4);
     }
 
+#endif
+
     for (; xx < xsize - 1; xx += 2) {   
         __m128i sss0 = initial;  // left row
         __m128i sss1 = initial;  // right row
@@ -574,8 +576,6 @@ ImagingResampleVerticalConvolution8u(UINT32 *lineOut, Imaging imIn,
         sss0 = _mm_packus_epi16(sss0, sss0);
         *(int64_t *) &lineOut[xx] = _mm_cvtsi128_si64x(sss0);
     }
-
-#endif
 
     for (; xx < xsize; xx++) {
         __m128i sss = initial;
