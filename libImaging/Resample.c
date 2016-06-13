@@ -342,7 +342,8 @@ ImagingResampleVerticalConvolution8u(UINT32 *lineOut, Imaging imIn,
 
         for (x = 0; x < xmax; x++) {
             __m128i source = _mm_loadu_si128((__m128i *) &imIn->image32[x + xmin][xx]);
-            mmk = _mm_set1_epi16(k[x]);
+            mmk = _mm_set1_epi32(k[x]);
+            mmk = _mm_packs_epi32(mmk, mmk);
             
             pix = _mm_unpacklo_epi8(source, _mm_setzero_si128());
             mul = _mm_mulhi_epi16(_mm_slli_epi16(pix, 7), mmk);
