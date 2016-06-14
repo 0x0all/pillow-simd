@@ -15,6 +15,10 @@ ImagingResampleHorizontalConvolution8u(UINT32 *lineOut, UINT32 *lineIn,
 
 #if defined(__AVX2__)
 
+    if (xmax < 8) {
+        sss = _mm_set1_epi32((1 << (coefs_precision -1)) + xmax / 2);
+    } else {
+
         __m256i sss256 = _mm256_set1_epi32((1 << (coefs_precision -2)) + xmax / 4);
 
         for (; x < xmax - 7; x += 8) {
@@ -65,6 +69,8 @@ ImagingResampleHorizontalConvolution8u(UINT32 *lineOut, UINT32 *lineIn,
             _mm256_extractf128_si256(sss256, 0),
             _mm256_extractf128_si256(sss256, 1)
         );
+
+    }
 
 #else
 
