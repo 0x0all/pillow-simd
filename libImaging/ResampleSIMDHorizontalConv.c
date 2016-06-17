@@ -84,12 +84,17 @@ ImagingResampleHorizontalConvolution8u4x(
         }
 
         for (; x < xmax; x ++) {
-            __m256i pix;
-            __m256i mmk = _mm256_set1_epi32(k[x]);
+            __m256i pix, mmk;
+
+            // [16] xx k0 xx k0 xx k0 xx k0 xx k0 xx k0 xx k0 xx k0
+            mmk = _mm256_set1_epi32(k[x]);
+
+            // [16] xx a0 xx b0 xx g0 xx r0 xx a0 xx b0 xx g0 xx r0
             pix = _mm256_inserti128_si256(_mm256_castsi128_si256(
                 _mm_cvtepu8_epi32(*(__m128i *) &lineIn0[x + xmin])),
                 _mm_cvtepu8_epi32(*(__m128i *) &lineIn1[x + xmin]), 1);
             sss0 = _mm256_add_epi32(sss0, _mm256_madd_epi16(pix, mmk));
+
             pix = _mm256_inserti128_si256(_mm256_castsi128_si256(
                 _mm_cvtepu8_epi32(*(__m128i *) &lineIn2[x + xmin])),
                 _mm_cvtepu8_epi32(*(__m128i *) &lineIn3[x + xmin]), 1);
@@ -290,8 +295,8 @@ ImagingResampleHorizontalConvolution8u(UINT32 *lineOut, UINT32 *lineIn,
         }
 
         sss = _mm_add_epi32(
-            _mm256_extractf128_si256(sss256, 0),
-            _mm256_extractf128_si256(sss256, 1)
+            _mm256_extracti128_si256(sss256, 0),
+            _mm256_extracti128_si256(sss256, 1)
         );
 
     }
