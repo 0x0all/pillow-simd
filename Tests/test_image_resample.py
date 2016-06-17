@@ -152,7 +152,7 @@ class TestImagingCoreResampleAccuracy(PillowTestCase):
                     'b8 b7 b4 bf c4 a0')
             for channel in case.split():
                 self.check_case(channel,
-                    self.make_sample(data, (12, 12)))
+                    self.make_sample(data, (12, 12)), strict=False)
 
 
 class CoreResampleConsistencyTest(PillowTestCase):
