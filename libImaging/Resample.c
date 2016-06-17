@@ -209,14 +209,10 @@ normalize_coeffs(int inSize, int kmax, double *prekk, INT16 **kkp)
     }
 
     coefs_precision = 0;
-    while (maxkk < (1 << (MAX_COEFS_PRECISION-1))) {
+    while (maxkk < (1 << (MAX_COEFS_PRECISION-1)) && (coefs_precision < MAX_PRECISION_BITS)) {
         maxkk *= 2;
         coefs_precision += 1;
     };
-
-    if (coefs_precision > MAX_PRECISION_BITS) {
-        coefs_precision = MAX_PRECISION_BITS;
-    }
 
     for (x = 0; x < inSize * kmax; x++) {
         if (prekk[x] > 0) {
