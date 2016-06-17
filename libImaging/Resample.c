@@ -272,7 +272,22 @@ ImagingResampleHorizontal_8bpc(Imaging imIn, int xsize, struct filter *filterp)
             }
         }
     } else if (imIn->type == IMAGING_TYPE_UINT8) {
-        for (yy = 0; yy < imOut->ysize; yy++) {
+        yy = 0;
+        for (; yy < imOut->ysize - 3; yy += 4) {
+            ImagingResampleHorizontalConvolution8u4x(
+                (UINT32 *) imOut->image32[yy],
+                (UINT32 *) imOut->image32[yy + 1],
+                (UINT32 *) imOut->image32[yy + 2],
+                (UINT32 *) imOut->image32[yy + 3],
+                (UINT32 *) imIn->image32[yy],
+                (UINT32 *) imIn->image32[yy + 1],
+                (UINT32 *) imIn->image32[yy + 2],
+                (UINT32 *) imIn->image32[yy + 3],
+                xsize, xbounds, kk, kmax,
+                coefs_precision
+            );
+        }
+        for (; yy < imOut->ysize; yy++) {
             ImagingResampleHorizontalConvolution8u(
                 (UINT32 *) imOut->image32[yy],
                 (UINT32 *) imIn->image32[yy],
